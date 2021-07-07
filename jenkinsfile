@@ -1,0 +1,76 @@
+pipeline 
+ {
+agent any
+stages
+{
+              stage('Create a resource group') 
+              {
+                steps 
+                {
+                  script 
+                  {
+                    azureCLI commands: [[script: 'az group create --name ${RESOURCEGROUP} --location ${LOCATION}']], 
+                    principalCredentialId: 'MyNewAzureServicePrincipal'
+                  }
+                }
+               }
+            stage('Create a virtual network') 
+              {
+                steps 
+                {
+                  script 
+                  {
+                    azureCLI commands: [[script: 'az network vnet create --resource-group ${RESOURCEGROUP} --name aro-vnet --address-prefixes 10.0.0.0/22']], 
+                    principalCredentialId: 'MyNewAzureServicePrincipal'
+                  }
+                }
+               }
+              stage('Add an empty subnet for the master nodes') 
+              {
+                steps 
+                {
+                  script 
+                  {
+                    azureCLI commands: [[script: 'az network vnet subnet create --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --name master-subnet --address-prefixes 10.0.0.0/23 --service-endpoints Microsoft.ContainerRegistry']], 
+                    principalCredentialId: 'MyNewAzureServicePrincipal'
+                  }
+                }
+               }
+            stage('Add an empty subnet for the worker nodes') 
+              {
+                steps 
+                {
+                  script 
+                  {
+                    azureCLI commands: [[script: 'az network vnet subnet create --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --name worker-subnet --address-prefixes 10.0.2.0/23 --service-endpoints Microsoft.ContainerRegistry']], 
+                    principalCredentialId: 'MyNewAzureServicePrincipal'
+                  }
+                }
+               }
+            stage('Disable subnet private endpoint policies') 
+              {
+                steps 
+                {
+                  script 
+                  {
+                    azureCLI commands: [[script: 'az network vnet subnet update --name master-subnet --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --disable-private-link-service-network-policies true']], 
+                    principalCredentialId: 'MyNewAzureServicePrincipal'
+                  }
+                }
+               }
+            stage('Create the cluster') 
+              {
+                steps 
+                {
+                  script 
+                  {
+                    withCredentials([file(credentialsId: 'MyAzureServicePrincipal_client_id', variable: 'MyAzureServicePrincipal_client_id'), file(credentialsId: 'MyAzureServicePrincipal_client_secret', variable: 'MyAzureServicePrincipal_client_secret')])
+                    {
+                    azureCLI commands: [[script: 'az aro create --resource-group ${RESOURCEGROUP} --name ${CLUSTER} --vnet aro-vnet --master-subnet master-subnet --worker-subnet worker-subnet --client-id ${MyAzureServicePrincipal_client_id} --client-secret ${MyAzureServicePrincipal_client_secret} --pull-secret @/var/lib/jenkins/workspace/aro_pull_secret.txt']], 
+                    principalCredentialId: 'MyNewAzureServicePrincipal'
+                    }
+                  }
+                }
+               }
+}
+}
