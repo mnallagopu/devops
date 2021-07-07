@@ -3,74 +3,101 @@ pipeline
 agent any
 stages
 {
-              stage('Create a resource group') 
-              {
-                steps 
+    stage('Azure Login') 
+    {
+        steps 
+        {
+            withCredentials([azureServicePrincipal(clientIdVariable: 'MY_AZURE_CLIENT_ID', clientSecretVariable: 'MY_AZURE_CLIENT_SECRET', credentialsId: 'MyNewAzureServicePrincipal', subscriptionIdVariable: 'MY_AZURE_SUBSCRIPTION_ID', tenantIdVariable: 'MY_AZURE_TENANT_ID'), ]) 
+            {
+                script
                 {
-                  script 
-                  {
-                    azureCLI commands: [[script: 'az group create --name ${RESOURCEGROUP} --location ${LOCATION}']], 
-                    principalCredentialId: 'MyNewAzureServicePrincipal'
-                  }
+                    sh'az login --service-principal --username ${MY_AZURE_CLIENT_ID} --tenant ${MY_AZURE_TENANT_ID}  --password ${MY_AZURE_CLIENT_SECRET}'
                 }
-               }
-            stage('Create a virtual network') 
-              {
-                steps 
+            }
+        }
+    }
+    stage('Create a resource group') 
+    {
+        steps 
+        {
+            withCredentials([azureServicePrincipal(clientIdVariable: 'MY_AZURE_CLIENT_ID', clientSecretVariable: 'MY_AZURE_CLIENT_SECRET', credentialsId: 'MyNewAzureServicePrincipal', subscriptionIdVariable: 'MY_AZURE_SUBSCRIPTION_ID', tenantIdVariable: 'MY_AZURE_TENANT_ID'), ]) 
+            {
+                script
                 {
-                  script 
-                  {
-                    azureCLI commands: [[script: 'az network vnet create --resource-group ${RESOURCEGROUP} --name aro-vnet --address-prefixes 10.0.0.0/22']], 
-                    principalCredentialId: 'MyNewAzureServicePrincipal'
-                  }
+                    sh'az group create --name ${RESOURCEGROUP} --location ${LOCATION}'
                 }
-               }
-              stage('Add an empty subnet for the master nodes') 
-              {
-                steps 
+            }
+        }
+    }
+
+    stage('Create a virtual network') 
+    {
+        steps 
+        {
+            withCredentials([azureServicePrincipal(clientIdVariable: 'MY_AZURE_CLIENT_ID', clientSecretVariable: 'MY_AZURE_CLIENT_SECRET', credentialsId: 'MyNewAzureServicePrincipal', subscriptionIdVariable: 'MY_AZURE_SUBSCRIPTION_ID', tenantIdVariable: 'MY_AZURE_TENANT_ID'), ]) 
+            {
+                script
                 {
-                  script 
-                  {
-                    azureCLI commands: [[script: 'az network vnet subnet create --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --name master-subnet --address-prefixes 10.0.0.0/23 --service-endpoints Microsoft.ContainerRegistry']], 
-                    principalCredentialId: 'MyNewAzureServicePrincipal'
-                  }
+                    sh'az network vnet create --resource-group ${RESOURCEGROUP} --name aro-vnet --address-prefixes 10.0.0.0/22'
                 }
-               }
-            stage('Add an empty subnet for the worker nodes') 
-              {
-                steps 
+            }
+        }
+    }
+
+    stage('Add an empty subnet for the master nodes') 
+    {
+        steps 
+        {
+            withCredentials([azureServicePrincipal(clientIdVariable: 'MY_AZURE_CLIENT_ID', clientSecretVariable: 'MY_AZURE_CLIENT_SECRET', credentialsId: 'MyNewAzureServicePrincipal', subscriptionIdVariable: 'MY_AZURE_SUBSCRIPTION_ID', tenantIdVariable: 'MY_AZURE_TENANT_ID'), ]) 
+            {
+                script
                 {
-                  script 
-                  {
-                    azureCLI commands: [[script: 'az network vnet subnet create --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --name worker-subnet --address-prefixes 10.0.2.0/23 --service-endpoints Microsoft.ContainerRegistry']], 
-                    principalCredentialId: 'MyNewAzureServicePrincipal'
-                  }
+                    sh'az network vnet subnet create --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --name master-subnet --address-prefixes 10.0.0.0/23 --service-endpoints Microsoft.ContainerRegistry'
                 }
-               }
-            stage('Disable subnet private endpoint policies') 
-              {
-                steps 
+            }
+        }
+    }
+
+    stage('Add an empty subnet for the worker nodes') 
+    {
+        steps 
+        {
+            withCredentials([azureServicePrincipal(clientIdVariable: 'MY_AZURE_CLIENT_ID', clientSecretVariable: 'MY_AZURE_CLIENT_SECRET', credentialsId: 'MyNewAzureServicePrincipal', subscriptionIdVariable: 'MY_AZURE_SUBSCRIPTION_ID', tenantIdVariable: 'MY_AZURE_TENANT_ID'), ]) 
+            {
+                script
                 {
-                  script 
-                  {
-                    azureCLI commands: [[script: 'az network vnet subnet update --name master-subnet --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --disable-private-link-service-network-policies true']], 
-                    principalCredentialId: 'MyNewAzureServicePrincipal'
-                  }
+                    sh'az network vnet subnet create --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --name worker-subnet --address-prefixes 10.0.2.0/23 --service-endpoints Microsoft.ContainerRegistry'
                 }
-               }
-            stage('Create the cluster') 
-              {
-                steps 
+            }
+        }
+    }
+
+    stage('Disable subnet private endpoint policies') 
+    {
+        steps 
+        {
+            withCredentials([azureServicePrincipal(clientIdVariable: 'MY_AZURE_CLIENT_ID', clientSecretVariable: 'MY_AZURE_CLIENT_SECRET', credentialsId: 'MyNewAzureServicePrincipal', subscriptionIdVariable: 'MY_AZURE_SUBSCRIPTION_ID', tenantIdVariable: 'MY_AZURE_TENANT_ID'), ]) 
+            {
+                script
                 {
-                  script 
-                  {
-                    withCredentials([file(credentialsId: 'MyAzureServicePrincipal_client_id', variable: 'MyAzureServicePrincipal_client_id'), file(credentialsId: 'MyAzureServicePrincipal_client_secret', variable: 'MyAzureServicePrincipal_client_secret')])
-                    {
-                    azureCLI commands: [[script: 'az aro create --resource-group ${RESOURCEGROUP} --name ${CLUSTER} --vnet aro-vnet --master-subnet master-subnet --worker-subnet worker-subnet --client-id ${MyAzureServicePrincipal_client_id} --client-secret ${MyAzureServicePrincipal_client_secret} --pull-secret @/var/lib/jenkins/workspace/aro_pull_secret.txt']], 
-                    principalCredentialId: 'MyNewAzureServicePrincipal'
-                    }
-                  }
+                    sh'az network vnet subnet update --name master-subnet --resource-group ${RESOURCEGROUP} --vnet-name aro-vnet --disable-private-link-service-network-policies true'
                 }
-               }
+            }
+        }
+    }
+
+    stage('Create the cluster') 
+    {
+        steps 
+        {
+            withCredentials([azureServicePrincipal(clientIdVariable: 'MY_AZURE_CLIENT_ID', clientSecretVariable: 'MY_AZURE_CLIENT_SECRET', credentialsId: 'MyNewAzureServicePrincipal', subscriptionIdVariable: 'MY_AZURE_SUBSCRIPTION_ID', tenantIdVariable: 'MY_AZURE_TENANT_ID'), ]) 
+            {
+                script
+                {
+                    sh'az aro create --resource-group ${RESOURCEGROUP} --name ${CLUSTER} --vnet aro-vnet --master-subnet master-subnet --worker-subnet worker-subnet --pull-secret /var/lib/jenkins/workspace/aro_pull_secret.txt'
+                }
+            }
+        }
+    }
 }
 }
