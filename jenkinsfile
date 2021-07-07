@@ -94,7 +94,7 @@ stages
             {
                 script
                 {
-                    sh'az aro create --resource-group ${RESOURCEGROUP} --name ${CLUSTER} --vnet aro-vnet --master-subnet master-subnet --worker-subnet worker-subnet --pull-secret /var/lib/jenkins/workspace/aro_pull_secret.txt'
+                    sh'az aro create --resource-group ${RESOURCEGROUP} --name ${CLUSTER} --vnet aro-vnet --master-subnet master-subnet --worker-subnet worker-subnet --pull-secret @/var/lib/jenkins/workspace/aro_pull_secret.txt'
                 }
             }
         }
